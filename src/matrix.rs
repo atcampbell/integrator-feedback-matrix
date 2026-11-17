@@ -36,8 +36,8 @@ impl Matrix {
 
     pub fn process(&mut self, ina: f64, inb: f64, inc: f64) {
         self.out1 = ina * self.a1 + inb * self.b1 + inc * self.c1;
-        self.out2 = inb * self.a2 + inb * self.b2 + inc * self.c2;
-        self.out3 = inc * self.a3 + inb * self.b3 + inc * self.c3;
+        self.out2 = ina * self.a2 + inb * self.b2 + inc * self.c2;
+        self.out3 = ina * self.a3 + inb * self.b3 + inc * self.c3;
     }
 
     pub fn get_out1(self) -> f64 {

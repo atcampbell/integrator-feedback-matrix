@@ -2,11 +2,8 @@ use web_sys::console;
 
 use crate::dc_block::DcBlock;
 use crate::integrator::Integrator;
-use crate::lorenz::Lorenz;
 use crate::matrix::Matrix;
 use crate::shared_params::{PointWriter, SharedParam};
-
-const LORENZ_SCALE: f64 = 1.0 / 25.0;
 
 fn to_audio_f32(sample: f64) -> f32 {
     // sample as f32
@@ -14,8 +11,6 @@ fn to_audio_f32(sample: f64) -> f32 {
 }
 
 pub struct Synth {
-    lorenz: Lorenz,
-    dt: SharedParam,
     dc_block1: DcBlock,
     dc_block2: DcBlock,
     dc_block3: DcBlock,
@@ -27,10 +22,8 @@ pub struct Synth {
 }
 
 impl Synth {
-    pub fn new(sample_rate: f64, dt: SharedParam) -> Self {
+    pub fn new(sample_rate: f64) -> Self {
         Synth {
-            lorenz: Lorenz::new(),
-            dt,
             dc_block1: DcBlock::new(),
             dc_block2: DcBlock::new(),
             dc_block3: DcBlock::new(),
@@ -68,21 +61,17 @@ impl Synth {
         self.integrator2.process(out2);
         self.integrator3.process(out3);
 
-        let out9 = self.integrator1.clone().get_value()
-            + self.integrator2.clone().get_value()
-            + self.integrator3.clone().get_value();
-        let out = out1.clamp(-1.0, 1.0);
+        let out = (out1 + out2 + out3) / 3.0_f64.sqrt() * 0.3;
 
         if self.count < 20 {
             console::log_1(
                 &format!(
-                    "[{}] matrix out1: {:.4}, out2: {:.4}, out3: {:.4}, OUT: {:.4}, OUT1: {:.4}",
+                    "[{}] matrix out1: {:.4}, out2: {:.4}, out3: {:.4}, OUT: {:.4}",
                     self.count,
                     self.matrix.clone().get_out1(),
                     self.matrix.clone().get_out2(),
                     self.matrix.clone().get_out3(),
                     to_audio_f32(out),
-                    out9
                 )
                 .into(),
             );

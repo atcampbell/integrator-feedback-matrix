@@ -14,9 +14,9 @@ pub fn start(dt: SharedParam, points: PointBuffer) -> Result<Stream, String> {
     let config = supported.config();
 
     match supported.sample_format() {
-        cpal::SampleFormat::I16 => build_stream::<i16>(&device, config, dt, points),
-        cpal::SampleFormat::F32 => build_stream::<f32>(&device, config, dt, points),
-        cpal::SampleFormat::U16 => build_stream::<u16>(&device, config, dt, points),
+        cpal::SampleFormat::I16 => build_stream::<i16>(&device, config, points),
+        cpal::SampleFormat::F32 => build_stream::<f32>(&device, config, points),
+        cpal::SampleFormat::U16 => build_stream::<u16>(&device, config, points),
         other => Err(format!("unsupported sample format: {:?}", other)),
     }
 }
@@ -24,7 +24,6 @@ pub fn start(dt: SharedParam, points: PointBuffer) -> Result<Stream, String> {
 fn build_stream<T>(
     device: &cpal::Device,
     config: cpal::StreamConfig,
-    dt: SharedParam,
     points: PointBuffer,
 ) -> Result<Stream, String>
 where
@@ -33,7 +32,7 @@ where
     let sample_rate = config.sample_rate as f64;
     let channels = config.channels as usize;
 
-    let mut synth = Synth::new(sample_rate, dt);
+    let mut synth = Synth::new(sample_rate);
 
     let err_fn = |err| console::error_1(&format!("an error occurred on stream: {}", err).into());
 
