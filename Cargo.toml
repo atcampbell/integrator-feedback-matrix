@@ -1,5 +1,5 @@
 [package]
-name = "cpal_wasm_template"
+name = "integrator_feedback_matrix"
 version = "0.1.0"
 edition = "2024"
 

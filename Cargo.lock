@@ -150,18 +150,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "cpal_wasm_template"
-version = "0.1.0"
-dependencies = [
- "console",
- "console_error_panic_hook",
- "cpal",
- "wasm-bindgen",
- "web-sys",
- "wee_alloc",
-]
-
-[[package]]
 name = "dasp_sample"
 version = "0.11.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -236,6 +224,18 @@ checksum = "cc4e190f5d26ca7051642629da2c52fc03bde85a03197c99408dcd291734c855"
 dependencies = [
  "equivalent",
  "hashbrown",
+]
+
+[[package]]
+name = "integrator_feedback_matrix"
+version = "0.1.0"
+dependencies = [
+ "console",
+ "console_error_panic_hook",
+ "cpal",
+ "wasm-bindgen",
+ "web-sys",
+ "wee_alloc",
 ]
 
 [[package]]
