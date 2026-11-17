@@ -49,4 +49,8 @@ impl Matrix {
     pub fn get_out3(self) -> f64 {
         self.out3
     }
+
+    pub fn get_outs(self) -> Vec<f64> {
+        vec![self.out1, self.out2, self.out3]
+    }
 }
