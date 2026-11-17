@@ -1,3 +1,4 @@
+use crate::dc_block::DcBlock;
 use crate::lorenz::Lorenz;
 use crate::shared_params::{PointWriter, SharedParam};
 
@@ -11,6 +12,7 @@ fn to_audio_f32(sample: f64) -> f32 {
 pub struct Synth {
     lorenz: Lorenz,
     dt: SharedParam,
+    dc_block: DcBlock,
 }
 
 impl Synth {
@@ -18,6 +20,7 @@ impl Synth {
         Synth {
             lorenz: Lorenz::new(),
             dt,
+            dc_block: DcBlock::new(),
         }
     }
 
@@ -31,6 +34,6 @@ impl Synth {
         );
 
         let signal = self.lorenz.x();
-        to_audio_f32(signal * LORENZ_SCALE)
+        to_audio_f32(self.dc_block.process(signal * LORENZ_SCALE))
     }
 }
