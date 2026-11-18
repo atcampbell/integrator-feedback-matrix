@@ -12,9 +12,9 @@ impl Matrix {
         let mut matrix: Vec<Vec<f64>> = Vec::new();
         let mut outputs: Vec<f64> = Vec::new();
 
-        for i in 0..channels {
+        for _i in 0..channels {
             let mut row: Vec<f64> = Vec::new();
-            for x in 0..channels {
+            for _j in 0..channels {
                 row.push(random() * 2000.0 - 1000.0);
             }
             matrix.push(row);

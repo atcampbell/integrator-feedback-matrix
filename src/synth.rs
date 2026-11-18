@@ -5,7 +5,7 @@ use crate::integrator::Integrator;
 use crate::matrix::Matrix;
 use crate::shared_params::{PointWriter, SharedParam};
 
-const INTEGRATOR_COEF: f64 = 0.99;
+const INTEGRATOR_COEF: f64 = 0.98;
 
 fn to_audio_f32(sample: f64) -> f32 {
     // sample as f32
@@ -13,36 +13,29 @@ fn to_audio_f32(sample: f64) -> f32 {
 }
 
 pub struct Synth {
-    channels: u32,
     dc_blocks: Vec<DcBlock>,
     integrators: Vec<Integrator>,
     matrix: Matrix,
 }
 
 impl Synth {
-    pub fn new(sample_rate: f64) -> Self {
-        let channels = 3;
-
-        let mut count = 0;
-
+    pub fn new(_sample_rate: f64, channels: u32) -> Self {
         let mut dc_blocks: Vec<DcBlock> = Vec::new();
         let mut integrators: Vec<Integrator> = Vec::new();
 
-        while count < channels {
+        for _i in 0..channels {
             dc_blocks.push(DcBlock::new());
             integrators.push(Integrator::new(INTEGRATOR_COEF));
-            count += 1;
         }
 
         Synth {
-            matrix: Matrix::new(3),
-            channels,
+            matrix: Matrix::new(channels),
             integrators,
             dc_blocks,
         }
     }
 
-    pub fn process(&mut self, writer: &mut PointWriter) -> f32 {
+    pub fn process(&mut self, _writer: &mut PointWriter) -> f32 {
         let mut int_outs: Vec<f64> = Vec::new();
 
         for integrator in self.integrators.iter() {

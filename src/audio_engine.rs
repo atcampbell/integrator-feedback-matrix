@@ -5,6 +5,8 @@ use crate::synth::Synth;
 use cpal::traits::{DeviceTrait, HostTrait, StreamTrait};
 use cpal::{FromSample, SizedSample, Stream};
 
+const NUM_CHANNELS: u32 = 9;
+
 pub fn start(dt: SharedParam, points: PointBuffer) -> Result<Stream, String> {
     let host = cpal::default_host();
     let device = host
@@ -32,7 +34,7 @@ where
     let sample_rate = config.sample_rate as f64;
     let channels = config.channels as usize;
 
-    let mut synth = Synth::new(sample_rate);
+    let mut synth = Synth::new(sample_rate, NUM_CHANNELS);
 
     let err_fn = |err| console::error_1(&format!("an error occurred on stream: {}", err).into());
 
