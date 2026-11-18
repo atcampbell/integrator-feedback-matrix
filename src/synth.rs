@@ -13,7 +13,7 @@ fn to_audio_f32(sample: f64) -> f32 {
 }
 
 pub struct Synth {
-    channels: i32,
+    channels: u32,
     dc_blocks: Vec<DcBlock>,
     integrators: Vec<Integrator>,
     dc_block1: DcBlock,
@@ -48,7 +48,7 @@ impl Synth {
             integrator1: Integrator::new(INTEGRATOR_COEFF),
             integrator2: Integrator::new(INTEGRATOR_COEFF),
             integrator3: Integrator::new(INTEGRATOR_COEFF),
-            matrix: Matrix::new(),
+            matrix: Matrix::new(3),
             // count: 0,
             channels,
             integrators,
@@ -64,7 +64,8 @@ impl Synth {
             count += 1;
         }
 
-        self.matrix.process(int_outs[0], int_outs[1], int_outs[2]);
+        // self.matrix.process(int_outs[0], int_outs[1], int_outs[2]);
+        self.matrix.process_matrix(int_outs);
 
         let mut count = 0;
         let mut output = 0.0;
