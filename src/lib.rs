@@ -1,3 +1,4 @@
+mod allpass;
 mod audio_engine;
 mod biquad;
 mod dc_block;

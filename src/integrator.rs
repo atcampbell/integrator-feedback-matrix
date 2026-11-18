@@ -1,4 +1,3 @@
-#[derive(Clone)]
 pub struct Integrator {
     input: f64,
     coefficient: f64,

@@ -1,6 +1,5 @@
 use web_sys::js_sys::Math::random;
 
-#[derive(Clone)]
 pub struct Matrix {
     channels: u32,
     matrix: Vec<Vec<f64>>,
