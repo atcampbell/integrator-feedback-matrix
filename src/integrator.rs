@@ -18,7 +18,7 @@ impl Integrator {
         self.coefficient = coefficient
     }
 
-    pub fn get_value(self) -> f64 {
+    pub fn get_value(&self) -> f64 {
         self.value
     }
 
