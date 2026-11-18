@@ -39,7 +39,7 @@ impl Matrix {
             // outputs[i as usize] = 0.0;
         }
 
-        // console::log_1(&format!("AFTER").into());
+        console::log_1(&format!("matrix {:?}", matrix).into());
 
         Matrix {
             a1: random() * 2000.0 - 1000.0,
@@ -71,8 +71,10 @@ impl Matrix {
     pub fn process_matrix(&mut self, input: Vec<f64>) {
         for i in 0..self.channels {
             let mut out = 0.0;
-            for x in 0..self.channels {
-                out += input[i as usize] * self.matrix[i as usize][x as usize];
+            // let mut out = 0.0;
+            for j in 0..self.channels {
+                out += input[j as usize] * self.matrix[i as usize][j as usize];
+                // out += input[i as usize] * self.matrix[i as usize][x as usize];
                 // matrix[i as usize][x as usize] = random() * 2000.0 - 1000.0;
             }
             self.outputs[i as usize] = out;
