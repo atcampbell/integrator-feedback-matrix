@@ -1,9 +1,11 @@
-use web_sys::console;
-
+use crate::biquad::Biquad;
 use crate::dc_block::DcBlock;
 use crate::integrator::Integrator;
 use crate::matrix::Matrix;
 use crate::shared_params::{PointWriter, SharedParam};
+use web_sys::console;
+use web_sys::js_sys::Math::random;
+// TODO not using rusts random here update to use rand::random
 
 const INTEGRATOR_COEF: f64 = 0.98;
 
@@ -12,26 +14,38 @@ fn to_audio_f32(sample: f64) -> f32 {
     sample.clamp(-1.0, 1.0) as f32
 }
 
+// TODO make a channel struct which has all of the required parts
+
 pub struct Synth {
     dc_blocks: Vec<DcBlock>,
     integrators: Vec<Integrator>,
+    filters: Vec<Biquad>,
     matrix: Matrix,
 }
 
 impl Synth {
-    pub fn new(_sample_rate: f64, channels: u32) -> Self {
+    pub fn new(sample_rate: f64, channels: u32) -> Self {
         let mut dc_blocks: Vec<DcBlock> = Vec::new();
         let mut integrators: Vec<Integrator> = Vec::new();
+        let mut filters: Vec<Biquad> = Vec::new();
 
         for _i in 0..channels {
             dc_blocks.push(DcBlock::new());
             integrators.push(Integrator::new(INTEGRATOR_COEF));
+            filters.push(Biquad::new(
+                sample_rate,
+                random() * 200.0 + 10.0,
+                random() * 0.0 + 0.001,
+                // rng().random_range(10.0..=4000.0),
+                // rng().random_range(0.001..=5.0), // random() + 0.01 * 5.0,
+            ));
         }
 
         Synth {
             matrix: Matrix::new(channels),
             integrators,
             dc_blocks,
+            filters,
         }
     }
 
@@ -46,6 +60,13 @@ impl Synth {
 
         let mut output = 0.0;
         let matrix_outs = self.matrix.get_outs();
+
+        // for i in 0..self.integrators.iter().len() {
+        //     let mut out = self.dc_blocks[i].process(matrix_outs[i]).clamp(-1.0, 1.0);
+        //     // out = self.filters[i].process(out);
+        //     self.integrators[0].process(out);
+        //     output += out;
+        // }
 
         for ((integrator, dc_block), &m) in self
             .integrators

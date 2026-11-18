@@ -1,4 +1,5 @@
 mod audio_engine;
+mod biquad;
 mod dc_block;
 mod integrator;
 mod matrix;
