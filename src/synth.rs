@@ -4,6 +4,7 @@ use crate::dc_block::DcBlock;
 use crate::integrator::Integrator;
 use crate::matrix::Matrix;
 use crate::shared_params::{PointWriter, SharedParam};
+use std::f64::consts::FRAC_PI_2;
 use web_sys::console;
 // TODO not using rusts random here update to use rand::random
 use web_sys::js_sys::Math::random;
@@ -22,10 +23,14 @@ pub struct Channel {
     integrator: Integrator,
     allpass: Vec<Allpass>,
     filters: Vec<Biquad>,
+    pan_left: f64,
+    pan_right: f64,
 }
 
 impl Channel {
     pub fn new(sample_rate: f64) -> Channel {
+        let pan_angle = random() * FRAC_PI_2;
+
         let mut allpass: Vec<Allpass> = Vec::new();
         let allpass_phase = random() * 2.0 - 1.0;
         for _i in 0..ALLPASS_CHANNELS {
@@ -47,14 +52,9 @@ impl Channel {
             dc_block: DcBlock::new(),
             integrator: Integrator::new(INTEGRATOR_COEF),
             allpass,
-            filters, // filters.push(Biquad::new(
-                     // sample_rate,
-                     // random() * 4000.0 + 10.0,
-                     // random() * 5.0 + 0.001,
-                     // // rng().random_range(10.0..=4000.0),
-                     // // rng().random_range(0.001..=5.0), // random() + 0.01 * 5.0,
-                     // ));
-                     // allpass.push(Allpass::new(random() * 2.0 - 1.0))
+            filters,
+            pan_left: pan_angle.cos(),
+            pan_right: pan_angle.sin(),
         }
     }
 
@@ -91,23 +91,26 @@ impl Synth {
     }
 
     pub fn process(&mut self, _writer: &mut PointWriter) -> (f32, f32) {
-        let mut int_outs: Vec<f64> = Vec::new();
+        let integrator_outs = self
+            .channels
+            .iter()
+            .map(|c| c.integrator.get_value())
+            .collect();
 
-        for channel in self.channels.iter() {
-            int_outs.push(channel.integrator.get_value());
-        }
+        self.matrix.process_matrix(integrator_outs);
 
-        self.matrix.process_matrix(int_outs);
-        let mut output = 0.0;
         let matrix_outs = self.matrix.get_outs();
 
-        for (i, channel) in self.channels.iter_mut().enumerate() {
-            let out = channel.process(matrix_outs[i]);
-            output += out;
+        let mut left = 0.0;
+        let mut right = 0.0;
+
+        for (channel, &m) in self.channels.iter_mut().zip(matrix_outs) {
+            let out = channel.process(m);
+            left += out * channel.pan_left;
+            right += out * channel.pan_right;
         }
 
-        let main_out = output / 3.0_f64.sqrt() * 0.3;
-
-        (to_audio_f32(main_out), to_audio_f32(main_out))
+        let gain = 0.3 / (self.channels.len() as f64).sqrt();
+        (to_audio_f32(left * gain), to_audio_f32(right * gain))
     }
 }
