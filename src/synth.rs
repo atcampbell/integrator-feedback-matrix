@@ -9,7 +9,7 @@ use web_sys::console;
 // TODO not using rusts random here update to use rand::random
 use web_sys::js_sys::Math::random;
 
-const INTEGRATOR_COEF: f64 = 0.98;
+const INTEGRATOR_COEF: f64 = 0.99;
 
 fn to_audio_f32(sample: f64) -> f32 {
     // sample as f32
@@ -25,6 +25,7 @@ pub struct Channel {
     filters: Vec<Biquad>,
     pan_left: f64,
     pan_right: f64,
+    level: f64,
 }
 
 impl Channel {
@@ -55,6 +56,7 @@ impl Channel {
             filters,
             pan_left: pan_angle.cos(),
             pan_right: pan_angle.sin(),
+            level: 1.0,
         }
     }
 
@@ -66,6 +68,7 @@ impl Channel {
         }
         out = self.dc_block.process(out);
         out = out.clamp(-1.0, 1.0);
+        out *= self.level;
         self.integrator.process(out);
         out
     }
@@ -87,6 +90,12 @@ impl Synth {
         Synth {
             matrix: Matrix::new(num_channels),
             channels,
+        }
+    }
+
+    pub fn randomise_levels(&mut self) {
+        for channel in self.channels.iter_mut() {
+            channel.level = random();
         }
     }
 

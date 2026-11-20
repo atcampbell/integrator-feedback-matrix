@@ -34,6 +34,13 @@ import('./pkg').catch(console.error).then((rust_module) => {
     const stop_button = document.getElementById('stop');
     stop_button.addEventListener('click', stop);
 
+    const randomise_button = document.getElementById('randomise');
+    randomise_button.addEventListener('click', () => {
+        if (handle != null) {
+            handle.randomise_channel_gain();
+        }
+    });
+
     const dt_slider = document.getElementById('dt');
     const dt_value = document.getElementById('dt-value');
     const current_dt = () => parseFloat(dt_slider.value);

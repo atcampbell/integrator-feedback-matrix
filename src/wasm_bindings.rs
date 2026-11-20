@@ -7,7 +7,7 @@
 static ALLOC: wee_alloc::WeeAlloc = wee_alloc::WeeAlloc::INIT;
 
 use crate::audio_engine;
-use crate::shared_params::{PointBuffer, SharedParam};
+use crate::shared_params::{PointBuffer, SharedParam, Trigger};
 use cpal::Stream;
 use wasm_bindgen::JsValue;
 use wasm_bindgen::prelude::wasm_bindgen;
@@ -30,12 +30,17 @@ pub struct Handle {
     _stream: Stream,
     dt: SharedParam,
     points: PointBuffer,
+    randomise: Trigger,
 }
 
 #[wasm_bindgen]
 impl Handle {
     pub fn set_dt(&self, dt: f64) {
         self.dt.set(dt);
+    }
+
+    pub fn randomise_channel_gain(&self) {
+        self.randomise.fire();
     }
 
     /// Drain every point generated since the last call. The x, y and z
@@ -76,14 +81,16 @@ impl Points {
 #[wasm_bindgen]
 pub fn beep(dt: f64) -> Result<Handle, JsValue> {
     let dt = SharedParam::new(dt);
-
     let points = PointBuffer::new(MAX_POINTS);
-    let stream =
-        audio_engine::start(dt.clone(), points.clone()).map_err(|e| JsValue::from_str(&e))?;
+    let randomise = Trigger::new();
+
+    let stream = audio_engine::start(dt.clone(), points.clone(), randomise.clone())
+        .map_err(|e| JsValue::from_str(&e))?;
 
     Ok(Handle {
         _stream: stream,
         dt,
         points,
+        randomise,
     })
 }

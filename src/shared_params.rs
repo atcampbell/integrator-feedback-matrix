@@ -1,6 +1,25 @@
 use std::collections::VecDeque;
-use std::sync::atomic::{AtomicU64, Ordering};
+use std::sync::atomic::{AtomicBool, AtomicU64, Ordering};
 use std::sync::{Arc, Mutex, MutexGuard};
+
+#[derive(Clone)]
+pub struct Trigger(Arc<AtomicBool>);
+
+impl Trigger {
+    pub fn new() -> Self {
+        Trigger(Arc::new(AtomicBool::new(false)))
+    }
+
+    /// Request the action. Called from JS.
+    pub fn fire(&self) {
+        self.0.store(true, Ordering::Relaxed)
+    }
+
+    /// Returns true once per `fire`, clearing the flag. Called from the audio callback.
+    pub fn take(&self) -> bool {
+        self.0.swap(false, Ordering::Relaxed)
+    }
+}
 
 #[derive(Clone)]
 pub struct SharedParam(Arc<AtomicU64>);

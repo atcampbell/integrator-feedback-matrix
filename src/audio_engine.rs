@@ -1,13 +1,13 @@
 use web_sys::console;
 
-use crate::shared_params::{PointBuffer, SharedParam};
+use crate::shared_params::{PointBuffer, SharedParam, Trigger};
 use crate::synth::Synth;
 use cpal::traits::{DeviceTrait, HostTrait, StreamTrait};
 use cpal::{FromSample, SizedSample, Stream};
 
 const NUM_CHANNELS: u32 = 9;
 
-pub fn start(dt: SharedParam, points: PointBuffer) -> Result<Stream, String> {
+pub fn start(dt: SharedParam, points: PointBuffer, randomise: Trigger) -> Result<Stream, String> {
     let host = cpal::default_host();
     let device = host
         .default_output_device()
@@ -16,9 +16,9 @@ pub fn start(dt: SharedParam, points: PointBuffer) -> Result<Stream, String> {
     let config = supported.config();
 
     match supported.sample_format() {
-        cpal::SampleFormat::I16 => build_stream::<i16>(&device, config, points),
-        cpal::SampleFormat::F32 => build_stream::<f32>(&device, config, points),
-        cpal::SampleFormat::U16 => build_stream::<u16>(&device, config, points),
+        cpal::SampleFormat::I16 => build_stream::<i16>(&device, config, points, randomise),
+        cpal::SampleFormat::F32 => build_stream::<f32>(&device, config, points, randomise),
+        cpal::SampleFormat::U16 => build_stream::<u16>(&device, config, points, randomise),
         other => Err(format!("unsupported sample format: {:?}", other)),
     }
 }
@@ -27,6 +27,7 @@ fn build_stream<T>(
     device: &cpal::Device,
     config: cpal::StreamConfig,
     points: PointBuffer,
+    randomise: Trigger,
 ) -> Result<Stream, String>
 where
     T: SizedSample + FromSample<f32>,
@@ -42,6 +43,9 @@ where
         .build_output_stream(
             config,
             move |data: &mut [T], _| {
+                if randomise.take() {
+                    synth.randomise_levels();
+                }
                 let mut writer = points.writer();
                 write_data(data, channels, || synth.process(&mut writer));
             },
