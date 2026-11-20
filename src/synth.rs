@@ -90,7 +90,7 @@ impl Synth {
         }
     }
 
-    pub fn process(&mut self, _writer: &mut PointWriter) -> f32 {
+    pub fn process(&mut self, _writer: &mut PointWriter) -> (f32, f32) {
         let mut int_outs: Vec<f64> = Vec::new();
 
         for channel in self.channels.iter() {
@@ -103,12 +103,11 @@ impl Synth {
 
         for (i, channel) in self.channels.iter_mut().enumerate() {
             let out = channel.process(matrix_outs[i]);
-            channel.integrator.process(out);
             output += out;
         }
 
         let main_out = output / 3.0_f64.sqrt() * 0.3;
 
-        to_audio_f32(main_out)
+        (to_audio_f32(main_out), to_audio_f32(main_out))
     }
 }

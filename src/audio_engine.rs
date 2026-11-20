@@ -53,14 +53,22 @@ where
     Ok(stream)
 }
 
-fn write_data<T>(output: &mut [T], channels: usize, mut next_sample: impl FnMut() -> f32)
+fn write_data<T>(output: &mut [T], channels: usize, mut next_frame: impl FnMut() -> (f32, f32))
 where
     T: SizedSample + FromSample<f32>,
 {
     for frame in output.chunks_mut(channels) {
-        let value: T = T::from_sample(next_sample());
-        for sample in frame.iter_mut() {
-            *sample = value;
+        let (left, right) = next_frame();
+        match frame {
+            [mono] => *mono = T::from_sample((left + right) * 0.5),
+            [l, r, rest @ ..] => {
+                *l = T::from_sample(left);
+                *r = T::from_sample(right);
+                for s in rest {
+                    *s = T::from_sample(0.0f32);
+                }
+            }
+            [] => {}
         }
     }
 }
