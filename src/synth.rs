@@ -10,22 +10,23 @@ use web_sys::console;
 use web_sys::js_sys::Math::random;
 
 const INTEGRATOR_COEF: f64 = 0.99;
+const ALLPASS_CHANNELS: u32 = 8;
+const LEVEL_SLEW: f64 = 0.99995;
 
 fn to_audio_f32(sample: f64) -> f32 {
     // sample as f32
     sample.clamp(-1.0, 1.0) as f32
 }
 
-const ALLPASS_CHANNELS: u32 = 4;
-
 pub struct Channel {
     dc_block: DcBlock,
     integrator: Integrator,
     allpass: Vec<Allpass>,
-    filters: Vec<Biquad>,
     pan_left: f64,
     pan_right: f64,
     level: f64,
+    level_smoothing: Integrator,
+    // filters: Vec<Biquad>,
 }
 
 impl Channel {
@@ -38,25 +39,26 @@ impl Channel {
             allpass.push(Allpass::new(allpass_phase))
         }
 
-        let mut filters: Vec<Biquad> = Vec::new();
-        for _i in 0..ALLPASS_CHANNELS {
-            filters.push(Biquad::new(
-                sample_rate,
-                random() * 4000.0 + 10.0,
-                random() * 5.0 + 0.001,
-                // rng().random_range(10.0..=4000.0),
-                // rng().random_range(0.001..=5.0), // random() + 0.01 * 5.0,))
-            ))
-        }
+        // let mut filters: Vec<Biquad> = Vec::new();
+        // for _i in 0..ALLPASS_CHANNELS {
+        //     filters.push(Biquad::new(
+        //         sample_rate,
+        //         random() * 4000.0 + 10.0,
+        //         random() * 5.0 + 0.001,
+        //         // rng().random_range(10.0..=4000.0),
+        //         // rng().random_range(0.001..=5.0), // random() + 0.01 * 5.0,))
+        //     ))
+        // }
 
         Channel {
             dc_block: DcBlock::new(),
             integrator: Integrator::new(INTEGRATOR_COEF),
             allpass,
-            filters,
+            // filters,
             pan_left: pan_angle.cos(),
             pan_right: pan_angle.sin(),
             level: 1.0,
+            level_smoothing: Integrator::new(LEVEL_SLEW),
         }
     }
 
@@ -68,7 +70,7 @@ impl Channel {
         }
         out = self.dc_block.process(out);
         out = out.clamp(-1.0, 1.0);
-        out *= self.level;
+        out *= self.level_smoothing.process(self.level);
         self.integrator.process(out);
         out
     }
@@ -95,7 +97,7 @@ impl Synth {
 
     pub fn randomise_levels(&mut self) {
         for channel in self.channels.iter_mut() {
-            channel.level = random();
+            channel.level = random() * 0.5 + 0.5;
         }
     }
 
