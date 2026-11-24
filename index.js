@@ -42,12 +42,7 @@ import('./pkg').catch(console.error).then((rust_module) => {
     const randomise_button = document.getElementById('randomise');
     randomise_button.addEventListener('click', () => {
         for (const input of param_inputs) {
-            const min = parseFloat(input.min);
-            const max = parseFloat(input.max);
-            input.value = min + Math.random() * (max - min);
-            // Run the slider's own listener, which updates its display and
-            // sends the new value to Rust.
-            input.dispatchEvent(new Event('input'));
+            randomise_param(input);
         }
         if (handle != null) {
             handle.randomise_channel_gain();
@@ -60,6 +55,16 @@ import('./pkg').catch(console.error).then((rust_module) => {
     const param_inputs = [...document.querySelectorAll('[data-param]')];
     const param_value = (input) => parseFloat(input.value);
 
+    // Move one slider to a random point in its range.
+    const randomise_param = (input) => {
+        const min = parseFloat(input.min);
+        const max = parseFloat(input.max);
+        input.value = min + Math.random() * (max - min);
+        // Run the slider's own listener, which updates its display and sends
+        // the new value to Rust.
+        input.dispatchEvent(new Event('input'));
+    };
+
     for (const input of param_inputs) {
         const name = input.dataset.param;
         const display = document.getElementById(`${name}-value`);
@@ -71,6 +76,14 @@ import('./pkg').catch(console.error).then((rust_module) => {
                 handle.set_param(name, param_value(input));
             }
         });
+
+        // A randomise button for just this parameter, placed after its value
+        // display (or after the slider if it has no display).
+        const randomise = document.createElement('input');
+        randomise.type = 'button';
+        randomise.value = 'randomise';
+        randomise.addEventListener('click', () => randomise_param(input));
+        (display ?? input).after(randomise);
     }
 
     const animate = () => {

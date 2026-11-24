@@ -57,7 +57,8 @@ impl Channel {
 pub struct Synth {
     matrix: Matrix,
     channels: Vec<Channel>,
-    /// Multiplier on the matrix outputs. Set from the UI, smoothed per sample.
+    /// Multiplier on the matrix's cross-channel weights. Set from the UI,
+    /// smoothed per sample.
     coupling: f64,
     coupling_smoothing: Integrator,
     /// Gain into each channel's tanh. Set from the UI, smoothed per sample.
@@ -98,16 +99,29 @@ impl Synth {
             self.set_phaser_feedback(amount);
         }
         if let Some(amount) = params.get("coupling") {
-            // 0–1 → 0.1–1000 on a log scale. 0.25 gives 1 (unchanged).
-            self.coupling = 10f64.powf(-1.0 + 4.0 * amount.clamp(0.0, 1.0));
+            self.set_coupling(amount);
         }
         if let Some(amount) = params.get("colour") {
             self.set_colour(amount);
         }
         if let Some(amount) = params.get("drive") {
-            // 0–1 → 0.1–10 on a log scale. 0.5 gives 1 (unchanged).
-            self.drive = 10f64.powf(-1.0 + 2.0 * amount.clamp(0.0, 1.0));
+            self.set_drive(amount);
         }
+    }
+
+    /// `amount` is 0–1 from the UI. It maps to a multiplier on the matrix's
+    /// cross-channel weights of 0.001 → 10 on a log scale (10^x, with x from
+    /// -3 to 1); 0.75 gives 1 (unchanged). At the bottom the channels are
+    /// almost independent; at the top they're tightly interlocked.
+    fn set_coupling(&mut self, amount: f64) {
+        self.coupling = 10f64.powf(-3.0 + 4.0 * amount.clamp(0.0, 1.0));
+    }
+
+    /// `amount` is 0–1 from the UI. It maps to the gain into each channel's
+    /// tanh of 0.1 → 10 on a log scale (10^x, with x from -1 to 1);
+    /// 0.5 gives 1 (unchanged).
+    fn set_drive(&mut self, amount: f64) {
+        self.drive = 10f64.powf(-1.0 + 2.0 * amount.clamp(0.0, 1.0));
     }
 
     /// `amount` is 0–1 from the UI. It maps linearly to an offset of -1 → 1
@@ -152,17 +166,17 @@ impl Synth {
             .map(|c| c.integrator.get_value())
             .collect();
 
-        self.matrix.process_matrix(integrator_outs);
+        let coupling = self.coupling_smoothing.process(self.coupling);
+        self.matrix.process_matrix(integrator_outs, coupling);
 
         let matrix_outs = self.matrix.get_outs();
-        let coupling = self.coupling_smoothing.process(self.coupling);
         let drive = self.drive_smoothing.process(self.drive);
 
         let mut left = 0.0;
         let mut right = 0.0;
 
         for (channel, &m) in self.channels.iter_mut().zip(matrix_outs) {
-            let out = channel.process(m * coupling, drive);
+            let out = channel.process(m, drive);
             left += out * channel.pan_left;
             right += out * channel.pan_right;
         }
