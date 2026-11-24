@@ -1,16 +1,14 @@
-use crate::allpass::Allpass;
-use crate::biquad::Biquad;
 use crate::dc_block::DcBlock;
 use crate::integrator::Integrator;
 use crate::matrix::Matrix;
-use crate::shared_params::{PointWriter, SharedParam};
+use crate::phaser::Phaser;
+use crate::shared_params::PointWriter;
 use std::f64::consts::FRAC_PI_2;
-use web_sys::console;
 // TODO not using rusts random here update to use rand::random
 use web_sys::js_sys::Math::random;
 
 const INTEGRATOR_COEF: f64 = 0.99;
-const ALLPASS_CHANNELS: u32 = 8;
+const ALLPASS_CHANNELS: u32 = 16;
 const LEVEL_SLEW: f64 = 0.99995;
 
 fn to_audio_f32(sample: f64) -> f32 {
@@ -21,7 +19,7 @@ fn to_audio_f32(sample: f64) -> f32 {
 pub struct Channel {
     dc_block: DcBlock,
     integrator: Integrator,
-    allpass: Vec<Allpass>,
+    allpass: Phaser,
     pan_left: f64,
     pan_right: f64,
     level: f64,
@@ -32,12 +30,6 @@ pub struct Channel {
 impl Channel {
     pub fn new(sample_rate: f64) -> Channel {
         let pan_angle = random() * FRAC_PI_2;
-
-        let mut allpass: Vec<Allpass> = Vec::new();
-        let allpass_phase = random() * 2.0 - 1.0;
-        for _i in 0..ALLPASS_CHANNELS {
-            allpass.push(Allpass::new(allpass_phase))
-        }
 
         // let mut filters: Vec<Biquad> = Vec::new();
         // for _i in 0..ALLPASS_CHANNELS {
@@ -53,7 +45,7 @@ impl Channel {
         Channel {
             dc_block: DcBlock::new(),
             integrator: Integrator::new(INTEGRATOR_COEF),
-            allpass,
+            allpass: Phaser::new(sample_rate, ALLPASS_CHANNELS, 0.99),
             // filters,
             pan_left: pan_angle.cos(),
             pan_right: pan_angle.sin(),
@@ -64,10 +56,7 @@ impl Channel {
 
     pub fn process(&mut self, input: f64) -> f64 {
         let mut out = input;
-
-        for filter in self.allpass.iter_mut() {
-            out += filter.process(out);
-        }
+        out = self.allpass.process(input);
         out = self.dc_block.process(out);
         out = out.clamp(-1.0, 1.0);
         out *= self.level_smoothing.process(self.level);

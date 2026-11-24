@@ -1,9 +1,9 @@
-mod allpass;
 mod audio_engine;
 mod biquad;
 mod dc_block;
 mod integrator;
 mod matrix;
+mod phaser;
 mod shared_params;
 mod synth;
 mod wasm_bindings;
