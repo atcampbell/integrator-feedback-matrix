@@ -1,11 +1,11 @@
 import { createScope } from './js/scope.js';
 
 import('./pkg').catch(console.error).then((rust_module) => {
-    // Rough [min, max] of each Lorenz axis, used to fit it on the scope.
+    const SCOPE_ZOOM = 1;
     const AXIS_RANGE = {
-        x: [-25, 25],
-        y: [-30, 30],
-        z: [0, 55],
+        x: [-SCOPE_ZOOM, SCOPE_ZOOM],
+        y: [-SCOPE_ZOOM, SCOPE_ZOOM],
+        z: [-SCOPE_ZOOM, SCOPE_ZOOM],
     };
     // Which axes to plot horizontally and vertically: any of 'x', 'y', 'z'.
     const SCOPE_H = 'x';
@@ -53,7 +53,7 @@ import('./pkg').catch(console.error).then((rust_module) => {
     });
 
     const animate = () => {
-        scope.fade();
+        // scope.fade();
         if (handle != null) {
             const points = handle.take_points(); // has .x, .y, .z Float32Arrays
             scope.draw(points[SCOPE_H], points[SCOPE_V]);

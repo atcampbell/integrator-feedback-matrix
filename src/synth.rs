@@ -24,23 +24,11 @@ pub struct Channel {
     pan_right: f64,
     level: f64,
     level_smoothing: Integrator,
-    // filters: Vec<Biquad>,
 }
 
 impl Channel {
     pub fn new(sample_rate: f64) -> Channel {
         let pan_angle = random() * FRAC_PI_2;
-
-        // let mut filters: Vec<Biquad> = Vec::new();
-        // for _i in 0..ALLPASS_CHANNELS {
-        //     filters.push(Biquad::new(
-        //         sample_rate,
-        //         random() * 4000.0 + 10.0,
-        //         random() * 5.0 + 0.001,
-        //         // rng().random_range(10.0..=4000.0),
-        //         // rng().random_range(0.001..=5.0), // random() + 0.01 * 5.0,))
-        //     ))
-        // }
 
         Channel {
             dc_block: DcBlock::new(),
@@ -58,7 +46,6 @@ impl Channel {
         let mut out = input;
         out = self.allpass.process(input);
         out = self.dc_block.process(out);
-        // out = out.clamp(-1.0, 1.0);
         // out = (out * 0.01).tanh();
         out = out.tanh();
         out *= self.level_smoothing.process(self.level);
@@ -92,7 +79,7 @@ impl Synth {
         }
     }
 
-    pub fn process(&mut self, _writer: &mut PointWriter) -> (f32, f32) {
+    pub fn process(&mut self, writer: &mut PointWriter) -> (f32, f32) {
         let integrator_outs = self
             .channels
             .iter()
@@ -113,6 +100,12 @@ impl Synth {
         }
 
         let gain = 0.3 / (self.channels.len() as f64).sqrt();
-        (to_audio_f32(left * gain), to_audio_f32(right * gain))
+        let left_out = to_audio_f32(left * gain);
+        let right_out = to_audio_f32(right * gain);
+
+        // Send the output to the scope: x = left, y = right, z = mid.
+        writer.push(left_out, right_out, (left_out + right_out) * 0.5);
+
+        (left_out, right_out)
     }
 }

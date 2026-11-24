@@ -27,6 +27,8 @@ export function createScope(canvas, h_range, v_range) {
         // Draw a line through the points (hs[i], vs[i]), continuing from the
         // last call.
         draw(hs, vs) {
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+
             const n = Math.min(hs.length, vs.length);
             if (n === 0) {
                 return;
