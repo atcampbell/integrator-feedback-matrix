@@ -29,8 +29,10 @@ pub struct Channel {
 }
 
 impl Channel {
-    pub fn new(sample_rate: f64) -> Channel {
-        let pan_angle = random() * FRAC_PI_2;
+    /// `pan` is the channel's stereo position: 0 is hard left, 1 is hard right.
+    pub fn new(sample_rate: f64, pan: f64) -> Channel {
+        // Equal-power panning: cos/sin keep the level constant across the field.
+        let pan_angle = pan * FRAC_PI_2;
 
         Channel {
             dc_block: DcBlock::new(),
@@ -70,8 +72,13 @@ impl Synth {
     pub fn new(sample_rate: f64, num_channels: u32) -> Self {
         let mut channels: Vec<Channel> = Vec::new();
 
-        for _i in 0..num_channels {
-            channels.push(Channel::new(sample_rate));
+        for i in 0..num_channels {
+            let pan = if num_channels > 1 {
+                i as f64 / (num_channels - 1) as f64
+            } else {
+                0.5
+            };
+            channels.push(Channel::new(sample_rate, pan));
         }
 
         // The smoothers start at 1.0, which matches these defaults.
