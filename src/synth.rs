@@ -45,7 +45,7 @@ impl Channel {
         Channel {
             dc_block: DcBlock::new(),
             integrator: Integrator::new(INTEGRATOR_COEF),
-            allpass: Phaser::new(sample_rate, ALLPASS_CHANNELS, 0.99),
+            allpass: Phaser::new(sample_rate, ALLPASS_CHANNELS, 1.0),
             // filters,
             pan_left: pan_angle.cos(),
             pan_right: pan_angle.sin(),

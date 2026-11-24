@@ -1,3 +1,4 @@
+use crate::dc_block::DcBlock;
 use web_sys::js_sys::Math::random;
 
 pub struct Allpass {
@@ -27,6 +28,7 @@ pub struct Phaser {
     feedback: f64,
     sample_rate: f64,
     value: f64,
+    dc_block: DcBlock,
 }
 
 impl Phaser {
@@ -39,6 +41,7 @@ impl Phaser {
 
         Phaser {
             value: 0.0,
+            dc_block: DcBlock::new(),
             feedback,
             sample_rate,
             allpass,
@@ -53,7 +56,7 @@ impl Phaser {
         }
 
         out += input;
-        self.value = out;
+        self.value = self.dc_block.process(out);
         out
     }
 }
