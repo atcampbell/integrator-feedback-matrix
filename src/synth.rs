@@ -10,7 +10,7 @@ use web_sys::js_sys::Math::random;
 const INTEGRATOR_COEF: f64 = 0.99;
 const ALLPASS_CHANNELS: u32 = 16;
 const LEVEL_SLEW: f64 = 0.99995;
-/// Smoothing for coupling and drive, so slider moves don't click (~20ms).
+/// Smoothing for cross-channel feedback and drive, so slider moves don't click (~20ms).
 const PARAM_SLEW: f64 = 0.999;
 
 fn to_audio_f32(sample: f64) -> f32 {
@@ -24,8 +24,12 @@ pub struct Channel {
     allpass: Phaser,
     pan_left: f64,
     pan_right: f64,
+    /// Target level, set by the channel level randomness control. Smoothed per sample.
     level: f64,
     level_smoothing: Integrator,
+    /// This channel's fixed random amount (0–1) of level reduction. Level
+    /// channel level randomness scales it: level = 1 - randomness * level_offset.
+    level_offset: f64,
 }
 
 impl Channel {
@@ -43,6 +47,7 @@ impl Channel {
             pan_right: pan_angle.sin(),
             level: 1.0,
             level_smoothing: Integrator::new(LEVEL_SLEW),
+            level_offset: random(),
         }
     }
 
@@ -59,11 +64,8 @@ impl Channel {
 pub struct Synth {
     matrix: Matrix,
     channels: Vec<Channel>,
-    /// Multiplier on the matrix's cross-channel weights. Set from the UI,
-    /// smoothed per sample.
-    coupling: f64,
-    coupling_smoothing: Integrator,
-    /// Gain into each channel's tanh. Set from the UI, smoothed per sample.
+    cross_feedback: f64,
+    cross_feedback_smoothing: Integrator,
     drive: f64,
     drive_smoothing: Integrator,
 }
@@ -85,19 +87,13 @@ impl Synth {
         Synth {
             matrix: Matrix::new(num_channels),
             channels,
-            coupling: 1.0,
-            coupling_smoothing: Integrator::new(PARAM_SLEW),
+            cross_feedback: 1.0,
+            cross_feedback_smoothing: Integrator::new(PARAM_SLEW),
             drive: 1.0,
             drive_smoothing: Integrator::new(PARAM_SLEW),
         }
     }
 
-    /// Read the latest values from the UI. Called once per audio buffer.
-    /// Each name matches a `data-param` attribute in index.html. For example:
-    ///
-    ///     if let Some(coupling) = params.get("coupling") {
-    ///         self.coupling = coupling;
-    ///     }
     pub fn apply_params(&mut self, params: &Params) {
         if let Some(amount) = params.get("integrator") {
             self.set_integrator_coefficient(amount);
@@ -105,8 +101,8 @@ impl Synth {
         if let Some(amount) = params.get("phaser_feedback") {
             self.set_phaser_feedback(amount);
         }
-        if let Some(amount) = params.get("coupling") {
-            self.set_coupling(amount);
+        if let Some(amount) = params.get("cross_feedback") {
+            self.set_cross_feedback(amount);
         }
         if let Some(amount) = params.get("colour") {
             self.set_colour(amount);
@@ -114,25 +110,30 @@ impl Synth {
         if let Some(amount) = params.get("drive") {
             self.set_drive(amount);
         }
+        if let Some(amount) = params.get("channel_level_randomness") {
+            self.set_channel_level_randomness(amount);
+        }
     }
 
-    /// `amount` is 0–1 from the UI. It maps to a multiplier on the matrix's
-    /// cross-channel weights of 0.001 → 10 on a log scale (10^x, with x from
-    /// -3 to 1); 0.75 gives 1 (unchanged). At the bottom the channels are
-    /// almost independent; at the top they're tightly interlocked.
-    fn set_coupling(&mut self, amount: f64) {
-        self.coupling = 10f64.powf(-3.0 + 4.0 * amount.clamp(0.0, 1.0));
+    /// `amount` is 0–1 from the UI. At 0 every channel is at full level; at 1
+    /// each channel is turned down by its own fixed random amount, anywhere
+    /// from not at all to silent. This changes how loud each channel is in
+    /// the mix and how strongly it drives the rest of the network.
+    fn set_channel_level_randomness(&mut self, amount: f64) {
+        let randomness = amount.clamp(0.0, 1.0);
+        for channel in self.channels.iter_mut() {
+            channel.level = 1.0 - randomness * channel.level_offset;
+        }
     }
 
-    /// `amount` is 0–1 from the UI. It maps to the gain into each channel's
-    /// tanh of 0.1 → 10 on a log scale (10^x, with x from -1 to 1);
-    /// 0.5 gives 1 (unchanged).
+    fn set_cross_feedback(&mut self, amount: f64) {
+        self.cross_feedback = 10f64.powf(-3.0 + 4.0 * amount.clamp(0.0, 1.0));
+    }
+
     fn set_drive(&mut self, amount: f64) {
         self.drive = 10f64.powf(-1.0 + 2.0 * amount.clamp(0.0, 1.0));
     }
 
-    /// `amount` is 0–1 from the UI. It maps linearly to an offset of -1 → 1
-    /// on every phaser's allpass coefficient; 0.5 leaves them unchanged.
     fn set_colour(&mut self, amount: f64) {
         let offset = amount.clamp(0.0, 1.0) * 2.0 - 1.0;
         for channel in self.channels.iter_mut() {
@@ -140,8 +141,6 @@ impl Synth {
         }
     }
 
-    /// `amount` is 0–1 from the UI. It maps linearly to a feedback of -1 → 1,
-    /// so the middle of the slider (0.5) is no feedback.
     fn set_phaser_feedback(&mut self, amount: f64) {
         let feedback = amount.clamp(0.0, 1.0) * 2.0 - 1.0;
         for channel in self.channels.iter_mut() {
@@ -149,9 +148,6 @@ impl Synth {
         }
     }
 
-    /// `amount` is 0–1 from the UI. It maps to a coefficient of 0.99 → 0.9999
-    /// on a log scale (1 - 10^-x, with x from 2 to 4), so the slider spends
-    /// equal travel on each extra "9" rather than bunching them at the end.
     fn set_integrator_coefficient(&mut self, amount: f64) {
         let x = 2.0 + 2.2 * amount.clamp(0.0, 1.0);
         let coefficient = 1.0 - 10f64.powf(-x);
@@ -160,9 +156,14 @@ impl Synth {
         }
     }
 
-    pub fn randomise_levels(&mut self) {
+    /// Give the feedback matrix new random weights, and each channel a new
+    /// random level offset. The new offsets take effect when `apply_params`
+    /// next runs `set_channel_level_randomness`, which the audio callback does straight
+    /// after this.
+    pub fn randomise_matrix(&mut self) {
+        self.matrix.randomise();
         for channel in self.channels.iter_mut() {
-            channel.level = random() * 0.5 + 0.5;
+            channel.level_offset = random();
         }
     }
 
@@ -173,8 +174,8 @@ impl Synth {
             .map(|c| c.integrator.get_value())
             .collect();
 
-        let coupling = self.coupling_smoothing.process(self.coupling);
-        self.matrix.process_matrix(integrator_outs, coupling);
+        let cross_feedback = self.cross_feedback_smoothing.process(self.cross_feedback);
+        self.matrix.process_matrix(integrator_outs, cross_feedback);
 
         let matrix_outs = self.matrix.get_outs();
         let drive = self.drive_smoothing.process(self.drive);

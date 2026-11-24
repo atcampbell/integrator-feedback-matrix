@@ -6,11 +6,13 @@
     </head>
     <body>
         <div>
-            <input id="play" type="button" value="start / randomise matrix levels at full gain" />
-            <input id="stop" type="button" value="stop" />
+            <input id="play" type="button" value="start" />
         </div>
         <div>
-            <input id="randomise" type="button" value="randomise all parameters" />
+            <input id="randomise-matrix" type="button" value="randomise network (matrix weights + channel levels)" />
+        </div>
+        <div>
+            <input id="randomise" type="button" value="randomise sliders" />
         </div>
         <div>
             <label for="integrator">integrator</label>
@@ -19,13 +21,13 @@
         </div>
         <div>
             <label for="phaser_feedback">phaser feedback</label>
-            <input id="phaser_feedback" data-param="phaser_feedback" type="range" min="0" max="1" step="0.001" value="0.5" />
-            <span id="phaser_feedback-value">0.5</span>
+            <input id="phaser_feedback" data-param="phaser_feedback" type="range" min="0" max="1" step="0.001" value="0.75" />
+            <span id="phaser_feedback-value">0.75</span>
         </div>
         <div>
-            <label for="coupling">coupling</label>
-            <input id="coupling" data-param="coupling" type="range" min="0" max="1" step="0.001" value="0.75" />
-            <span id="coupling-value">0.75</span>
+            <label for="cross_feedback">cross-channel feedback</label>
+            <input id="cross_feedback" data-param="cross_feedback" type="range" min="0" max="1" step="0.001" value="0.75" />
+            <span id="cross_feedback-value">0.75</span>
         </div>
         <div>
             <label for="colour">colour</label>
@@ -36,6 +38,11 @@
             <label for="drive">drive</label>
             <input id="drive" data-param="drive" type="range" min="0" max="1" step="0.001" value="0.5" />
             <span id="drive-value">0.5</span>
+        </div>
+        <div>
+            <label for="channel_level_randomness">channel level randomness</label>
+            <input id="channel_level_randomness" data-param="channel_level_randomness" type="range" min="0" max="1" step="0.001" value="0" />
+            <span id="channel_level_randomness-value">0</span>
         </div>
         <canvas id="scope" width="500" height="500" style="background: #000"></canvas>
     </body>

@@ -9,6 +9,7 @@ static ALLOC: wee_alloc::WeeAlloc = wee_alloc::WeeAlloc::INIT;
 use crate::audio_engine;
 use crate::shared_params::{Params, PointBuffer, Trigger};
 use cpal::Stream;
+use cpal::traits::StreamTrait;
 use wasm_bindgen::JsValue;
 use wasm_bindgen::prelude::wasm_bindgen;
 
@@ -27,10 +28,10 @@ pub fn main_js() -> Result<(), JsValue> {
 
 #[wasm_bindgen]
 pub struct Handle {
-    _stream: Stream,
+    stream: Stream,
     params: Params,
     points: PointBuffer,
-    randomise: Trigger,
+    randomise_matrix: Trigger,
 }
 
 #[wasm_bindgen]
@@ -42,8 +43,25 @@ impl Handle {
             .map_err(|e| JsValue::from_str(&e))
     }
 
-    pub fn randomise_channel_gain(&self) {
-        self.randomise.fire();
+    /// Resume audio after `pause`. The synth carries on from where it was.
+    pub fn play(&self) -> Result<(), JsValue> {
+        self.stream
+            .play()
+            .map_err(|e| JsValue::from_str(&e.to_string()))
+    }
+
+    /// Suspend audio without destroying the synth, so its state (including
+    /// the matrix weights) is kept for the next `play`.
+    pub fn pause(&self) -> Result<(), JsValue> {
+        self.stream
+            .pause()
+            .map_err(|e| JsValue::from_str(&e.to_string()))
+    }
+
+    /// Give the feedback matrix new random weights. If audio is paused, this
+    /// happens when it resumes.
+    pub fn randomise_matrix(&self) {
+        self.randomise_matrix.fire();
     }
 
     /// Drain every point generated since the last call. The x, y and z
@@ -87,15 +105,15 @@ impl Points {
 pub fn beep(names: Vec<String>, values: Vec<f64>) -> Result<Handle, JsValue> {
     let params = Params::new(names, values).map_err(|e| JsValue::from_str(&e))?;
     let points = PointBuffer::new(MAX_POINTS);
-    let randomise = Trigger::new();
+    let randomise_matrix = Trigger::new();
 
-    let stream = audio_engine::start(params.clone(), points.clone(), randomise.clone())
+    let stream = audio_engine::start(params.clone(), points.clone(), randomise_matrix.clone())
         .map_err(|e| JsValue::from_str(&e))?;
 
     Ok(Handle {
-        _stream: stream,
+        stream,
         params,
         points,
-        randomise,
+        randomise_matrix,
     })
 }
