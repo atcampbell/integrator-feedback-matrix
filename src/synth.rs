@@ -45,7 +45,7 @@ impl Channel {
         Channel {
             dc_block: DcBlock::new(),
             integrator: Integrator::new(INTEGRATOR_COEF),
-            allpass: Phaser::new(sample_rate, ALLPASS_CHANNELS, 1.0),
+            allpass: Phaser::new(sample_rate, ALLPASS_CHANNELS, -1.0),
             // filters,
             pan_left: pan_angle.cos(),
             pan_right: pan_angle.sin(),
@@ -58,7 +58,9 @@ impl Channel {
         let mut out = input;
         out = self.allpass.process(input);
         out = self.dc_block.process(out);
-        out = out.clamp(-1.0, 1.0);
+        // out = out.clamp(-1.0, 1.0);
+        // out = (out * 0.01).tanh();
+        out = out.tanh();
         out *= self.level_smoothing.process(self.level);
         self.integrator.process(out);
         out
