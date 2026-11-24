@@ -37,8 +37,18 @@ import('./pkg').catch(console.error).then((rust_module) => {
     const stop_button = document.getElementById('stop');
     stop_button.addEventListener('click', stop);
 
+    // Move every parameter slider to a random point in its range, and
+    // randomise the per-channel levels in Rust (those have no sliders).
     const randomise_button = document.getElementById('randomise');
     randomise_button.addEventListener('click', () => {
+        for (const input of param_inputs) {
+            const min = parseFloat(input.min);
+            const max = parseFloat(input.max);
+            input.value = min + Math.random() * (max - min);
+            // Run the slider's own listener, which updates its display and
+            // sends the new value to Rust.
+            input.dispatchEvent(new Event('input'));
+        }
         if (handle != null) {
             handle.randomise_channel_gain();
         }

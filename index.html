@@ -10,7 +10,7 @@
             <input id="stop" type="button" value="stop" />
         </div>
         <div>
-            <input id="randomise" type="button" value="randomise channel gain" />
+            <input id="randomise" type="button" value="randomise all parameters" />
         </div>
         <div>
             <label for="dt">dt</label>
@@ -26,6 +26,21 @@
             <label for="phaser_feedback">phaser feedback</label>
             <input id="phaser_feedback" data-param="phaser_feedback" type="range" min="0" max="1" step="0.001" value="0.5" />
             <span id="phaser_feedback-value">0.5</span>
+        </div>
+        <div>
+            <label for="coupling">coupling</label>
+            <input id="coupling" data-param="coupling" type="range" min="0" max="1" step="0.001" value="0.25" />
+            <span id="coupling-value">0.25</span>
+        </div>
+        <div>
+            <label for="colour">colour</label>
+            <input id="colour" data-param="colour" type="range" min="0" max="1" step="0.001" value="0.5" />
+            <span id="colour-value">0.5</span>
+        </div>
+        <div>
+            <label for="drive">drive</label>
+            <input id="drive" data-param="drive" type="range" min="0" max="1" step="0.001" value="0.5" />
+            <span id="drive-value">0.5</span>
         </div>
         <canvas id="scope" width="500" height="500" style="background: #000"></canvas>
     </body>

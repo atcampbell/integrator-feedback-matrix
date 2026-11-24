@@ -11,6 +11,10 @@ impl Allpass {
         Allpass { prev: 0.0, g }
     }
 
+    pub fn set_g(&mut self, g: f64) {
+        self.g = g;
+    }
+
     pub fn process(&mut self, input: f64) -> f64 {
         let v = input + self.g * self.prev;
         let out = -self.g * v + self.prev;
@@ -25,6 +29,9 @@ fn crossfade(in1: f64, in2: f64, crossfade: f64) -> f64 {
 
 pub struct Phaser {
     allpass: Vec<Allpass>,
+    /// This phaser's random allpass coefficient. The colour control shifts
+    /// every phaser away from its own base, so channels stay distinct.
+    base_g: f64,
     feedback: f64,
     sample_rate: f64,
     value: f64,
@@ -40,6 +47,7 @@ impl Phaser {
         }
 
         Phaser {
+            base_g: allpass_phase,
             value: 0.0,
             dc_block: DcBlock::new(),
             feedback,
@@ -50,6 +58,15 @@ impl Phaser {
 
     pub fn set_feedback(&mut self, feedback: f64) {
         self.feedback = feedback;
+    }
+
+    /// Shift the allpass coefficient by `offset` from this phaser's base value.
+    /// Kept inside ±0.99 so the allpasses stay stable.
+    pub fn set_colour(&mut self, offset: f64) {
+        let g = (self.base_g + offset).clamp(-0.99, 0.99);
+        for filter in self.allpass.iter_mut() {
+            filter.set_g(g);
+        }
     }
 
     pub fn process(&mut self, input: f64) -> f64 {

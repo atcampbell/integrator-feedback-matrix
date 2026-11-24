@@ -10,6 +10,8 @@ use web_sys::js_sys::Math::random;
 const INTEGRATOR_COEF: f64 = 0.99;
 const ALLPASS_CHANNELS: u32 = 16;
 const LEVEL_SLEW: f64 = 0.99995;
+/// Smoothing for coupling and drive, so slider moves don't click (~20ms).
+const PARAM_SLEW: f64 = 0.999;
 
 fn to_audio_f32(sample: f64) -> f32 {
     // sample as f32
@@ -42,12 +44,10 @@ impl Channel {
         }
     }
 
-    pub fn process(&mut self, input: f64) -> f64 {
-        let mut out = input;
-        out = self.allpass.process(input);
+    pub fn process(&mut self, input: f64, drive: f64) -> f64 {
+        let mut out = self.allpass.process(input);
         out = self.dc_block.process(out);
-        // out = (out * 0.01).tanh();
-        out = out.tanh();
+        out = (out * drive).tanh();
         out *= self.level_smoothing.process(self.level);
         self.integrator.process(out);
         out
@@ -57,6 +57,12 @@ impl Channel {
 pub struct Synth {
     matrix: Matrix,
     channels: Vec<Channel>,
+    /// Multiplier on the matrix outputs. Set from the UI, smoothed per sample.
+    coupling: f64,
+    coupling_smoothing: Integrator,
+    /// Gain into each channel's tanh. Set from the UI, smoothed per sample.
+    drive: f64,
+    drive_smoothing: Integrator,
 }
 
 impl Synth {
@@ -67,9 +73,14 @@ impl Synth {
             channels.push(Channel::new(sample_rate));
         }
 
+        // The smoothers start at 1.0, which matches these defaults.
         Synth {
             matrix: Matrix::new(num_channels),
             channels,
+            coupling: 1.0,
+            coupling_smoothing: Integrator::new(PARAM_SLEW),
+            drive: 1.0,
+            drive_smoothing: Integrator::new(PARAM_SLEW),
         }
     }
 
@@ -85,6 +96,26 @@ impl Synth {
         }
         if let Some(amount) = params.get("phaser_feedback") {
             self.set_phaser_feedback(amount);
+        }
+        if let Some(amount) = params.get("coupling") {
+            // 0–1 → 0.1–1000 on a log scale. 0.25 gives 1 (unchanged).
+            self.coupling = 10f64.powf(-1.0 + 4.0 * amount.clamp(0.0, 1.0));
+        }
+        if let Some(amount) = params.get("colour") {
+            self.set_colour(amount);
+        }
+        if let Some(amount) = params.get("drive") {
+            // 0–1 → 0.1–10 on a log scale. 0.5 gives 1 (unchanged).
+            self.drive = 10f64.powf(-1.0 + 2.0 * amount.clamp(0.0, 1.0));
+        }
+    }
+
+    /// `amount` is 0–1 from the UI. It maps linearly to an offset of -1 → 1
+    /// on every phaser's allpass coefficient; 0.5 leaves them unchanged.
+    fn set_colour(&mut self, amount: f64) {
+        let offset = amount.clamp(0.0, 1.0) * 2.0 - 1.0;
+        for channel in self.channels.iter_mut() {
+            channel.allpass.set_colour(offset);
         }
     }
 
@@ -124,12 +155,14 @@ impl Synth {
         self.matrix.process_matrix(integrator_outs);
 
         let matrix_outs = self.matrix.get_outs();
+        let coupling = self.coupling_smoothing.process(self.coupling);
+        let drive = self.drive_smoothing.process(self.drive);
 
         let mut left = 0.0;
         let mut right = 0.0;
 
         for (channel, &m) in self.channels.iter_mut().zip(matrix_outs) {
-            let out = channel.process(m);
+            let out = channel.process(m * coupling, drive);
             left += out * channel.pan_left;
             right += out * channel.pan_right;
         }
