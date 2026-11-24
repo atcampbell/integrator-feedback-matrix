@@ -10,7 +10,6 @@ use web_sys::js_sys::Math::random;
 const INTEGRATOR_COEF: f64 = 0.99;
 const ALLPASS_CHANNELS: u32 = 16;
 const LEVEL_SLEW: f64 = 0.99995;
-/// Smoothing for cross-channel feedback and drive, so slider moves don't click (~20ms).
 const PARAM_SLEW: f64 = 0.999;
 
 fn to_audio_f32(sample: f64) -> f32 {
@@ -24,11 +23,8 @@ pub struct Channel {
     allpass: Phaser,
     pan_left: f64,
     pan_right: f64,
-    /// Target level, set by the channel level randomness control. Smoothed per sample.
     level: f64,
     level_smoothing: Integrator,
-    /// This channel's fixed random amount (0–1) of level reduction. Level
-    /// channel level randomness scales it: level = 1 - randomness * level_offset.
     level_offset: f64,
 }
 
@@ -104,25 +100,21 @@ impl Synth {
         if let Some(amount) = params.get("cross_feedback") {
             self.set_cross_feedback(amount);
         }
-        if let Some(amount) = params.get("colour") {
-            self.set_colour(amount);
+        if let Some(amount) = params.get("phaser_coefficient_offset") {
+            self.set_phaser_coefficient_offset(amount);
         }
         if let Some(amount) = params.get("drive") {
             self.set_drive(amount);
         }
-        if let Some(amount) = params.get("channel_level_randomness") {
-            self.set_channel_level_randomness(amount);
+        if let Some(amount) = params.get("channel_level_offset") {
+            self.set_channel_level_offset(amount);
         }
     }
 
-    /// `amount` is 0–1 from the UI. At 0 every channel is at full level; at 1
-    /// each channel is turned down by its own fixed random amount, anywhere
-    /// from not at all to silent. This changes how loud each channel is in
-    /// the mix and how strongly it drives the rest of the network.
-    fn set_channel_level_randomness(&mut self, amount: f64) {
-        let randomness = amount.clamp(0.0, 1.0);
+    fn set_channel_level_offset(&mut self, amount: f64) {
+        let offset = amount.clamp(0.0, 1.0);
         for channel in self.channels.iter_mut() {
-            channel.level = 1.0 - randomness * channel.level_offset;
+            channel.level = 1.0 - offset * channel.level_offset;
         }
     }
 
@@ -134,10 +126,10 @@ impl Synth {
         self.drive = 10f64.powf(-1.0 + 2.0 * amount.clamp(0.0, 1.0));
     }
 
-    fn set_colour(&mut self, amount: f64) {
+    fn set_phaser_coefficient_offset(&mut self, amount: f64) {
         let offset = amount.clamp(0.0, 1.0) * 2.0 - 1.0;
         for channel in self.channels.iter_mut() {
-            channel.allpass.set_colour(offset);
+            channel.allpass.set_coefficient_offset(offset);
         }
     }
 
@@ -149,17 +141,13 @@ impl Synth {
     }
 
     fn set_integrator_coefficient(&mut self, amount: f64) {
-        let x = 2.0 + 2.2 * amount.clamp(0.0, 1.0);
+        let x = 1.0 + 2.2 * amount.clamp(0.0, 1.0);
         let coefficient = 1.0 - 10f64.powf(-x);
         for channel in self.channels.iter_mut() {
             channel.integrator.set_coefficient(coefficient);
         }
     }
 
-    /// Give the feedback matrix new random weights, and each channel a new
-    /// random level offset. The new offsets take effect when `apply_params`
-    /// next runs `set_channel_level_randomness`, which the audio callback does straight
-    /// after this.
     pub fn randomise_matrix(&mut self) {
         self.matrix.randomise();
         for channel in self.channels.iter_mut() {

@@ -29,8 +29,6 @@ fn crossfade(in1: f64, in2: f64, crossfade: f64) -> f64 {
 
 pub struct Phaser {
     allpass: Vec<Allpass>,
-    /// This phaser's random allpass coefficient. The colour control shifts
-    /// every phaser away from its own base, so channels stay distinct.
     base_g: f64,
     feedback: f64,
     sample_rate: f64,
@@ -60,9 +58,7 @@ impl Phaser {
         self.feedback = feedback;
     }
 
-    /// Shift the allpass coefficient by `offset` from this phaser's base value.
-    /// Kept inside ±0.99 so the allpasses stay stable.
-    pub fn set_colour(&mut self, offset: f64) {
+    pub fn set_coefficient_offset(&mut self, offset: f64) {
         let g = (self.base_g + offset).clamp(-0.99, 0.99);
         for filter in self.allpass.iter_mut() {
             filter.set_g(g);

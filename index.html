@@ -15,7 +15,7 @@
             <input id="randomise" type="button" value="randomise sliders" />
         </div>
         <div>
-            <label for="integrator">integrator</label>
+            <label for="integrator">integrator level coefficients</label>
             <input id="integrator" data-param="integrator" type="range" min="0" max="1" step="0.001" value="0" />
             <span id="integrator-value">0</span>
         </div>
@@ -30,9 +30,9 @@
             <span id="cross_feedback-value">0.75</span>
         </div>
         <div>
-            <label for="colour">colour</label>
-            <input id="colour" data-param="colour" type="range" min="0" max="1" step="0.001" value="0.5" />
-            <span id="colour-value">0.5</span>
+            <label for="phaser_coefficient_offset">offset phaser coefficients</label>
+            <input id="phaser_coefficient_offset" data-param="phaser_coefficient_offset" type="range" min="0" max="1" step="0.001" value="0.5" />
+            <span id="phaser_coefficient_offset-value">0.5</span>
         </div>
         <div>
             <label for="drive">drive</label>
@@ -40,9 +40,9 @@
             <span id="drive-value">0.5</span>
         </div>
         <div>
-            <label for="channel_level_randomness">channel level randomness</label>
-            <input id="channel_level_randomness" data-param="channel_level_randomness" type="range" min="0" max="1" step="0.001" value="0" />
-            <span id="channel_level_randomness-value">0</span>
+            <label for="channel_level_offset">channel level offset</label>
+            <input id="channel_level_offset" data-param="channel_level_offset" type="range" min="0" max="1" step="0.001" value="0" />
+            <span id="channel_level_offset-value">0</span>
         </div>
         <canvas id="scope" width="500" height="500" style="background: #000"></canvas>
     </body>

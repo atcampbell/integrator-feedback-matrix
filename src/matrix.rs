@@ -18,7 +18,6 @@ impl Matrix {
         matrix
     }
 
-    /// Give every weight a new random value between -1000 and 1000.
     pub fn randomise(&mut self) {
         for row in self.matrix.iter_mut() {
             for weight in row.iter_mut() {
