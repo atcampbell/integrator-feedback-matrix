@@ -1,13 +1,13 @@
 use web_sys::console;
 
-use crate::shared_params::{PointBuffer, SharedParam, Trigger};
+use crate::shared_params::{Params, PointBuffer, Trigger};
 use crate::synth::Synth;
 use cpal::traits::{DeviceTrait, HostTrait, StreamTrait};
 use cpal::{FromSample, SizedSample, Stream};
 
 const NUM_CHANNELS: u32 = 9;
 
-pub fn start(dt: SharedParam, points: PointBuffer, randomise: Trigger) -> Result<Stream, String> {
+pub fn start(params: Params, points: PointBuffer, randomise: Trigger) -> Result<Stream, String> {
     let host = cpal::default_host();
     let device = host
         .default_output_device()
@@ -16,9 +16,9 @@ pub fn start(dt: SharedParam, points: PointBuffer, randomise: Trigger) -> Result
     let config = supported.config();
 
     match supported.sample_format() {
-        cpal::SampleFormat::I16 => build_stream::<i16>(&device, config, points, randomise),
-        cpal::SampleFormat::F32 => build_stream::<f32>(&device, config, points, randomise),
-        cpal::SampleFormat::U16 => build_stream::<u16>(&device, config, points, randomise),
+        cpal::SampleFormat::I16 => build_stream::<i16>(&device, config, params, points, randomise),
+        cpal::SampleFormat::F32 => build_stream::<f32>(&device, config, params, points, randomise),
+        cpal::SampleFormat::U16 => build_stream::<u16>(&device, config, params, points, randomise),
         other => Err(format!("unsupported sample format: {:?}", other)),
     }
 }
@@ -26,6 +26,7 @@ pub fn start(dt: SharedParam, points: PointBuffer, randomise: Trigger) -> Result
 fn build_stream<T>(
     device: &cpal::Device,
     config: cpal::StreamConfig,
+    params: Params,
     points: PointBuffer,
     randomise: Trigger,
 ) -> Result<Stream, String>
@@ -46,6 +47,7 @@ where
                 if randomise.take() {
                     synth.randomise_levels();
                 }
+                synth.apply_params(&params);
                 let mut writer = points.writer();
                 write_data(data, channels, || synth.process(&mut writer));
             },

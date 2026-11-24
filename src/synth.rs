@@ -2,7 +2,7 @@ use crate::dc_block::DcBlock;
 use crate::integrator::Integrator;
 use crate::matrix::Matrix;
 use crate::phaser::Phaser;
-use crate::shared_params::PointWriter;
+use crate::shared_params::{Params, PointWriter};
 use std::f64::consts::FRAC_PI_2;
 // TODO not using rusts random here update to use rand::random
 use web_sys::js_sys::Math::random;
@@ -33,7 +33,7 @@ impl Channel {
         Channel {
             dc_block: DcBlock::new(),
             integrator: Integrator::new(INTEGRATOR_COEF),
-            allpass: Phaser::new(sample_rate, ALLPASS_CHANNELS, -1.0),
+            allpass: Phaser::new(sample_rate, ALLPASS_CHANNELS, -0.0),
             // filters,
             pan_left: pan_angle.cos(),
             pan_right: pan_angle.sin(),
@@ -70,6 +70,29 @@ impl Synth {
         Synth {
             matrix: Matrix::new(num_channels),
             channels,
+        }
+    }
+
+    /// Read the latest values from the UI. Called once per audio buffer.
+    /// Each name matches a `data-param` attribute in index.html. For example:
+    ///
+    ///     if let Some(coupling) = params.get("coupling") {
+    ///         self.coupling = coupling;
+    ///     }
+    pub fn apply_params(&mut self, params: &Params) {
+        if let Some(amount) = params.get("integrator") {
+            self.set_integrator_coefficient(amount);
+        }
+    }
+
+    /// `amount` is 0–1 from the UI. It maps to a coefficient of 0.99 → 0.9999
+    /// on a log scale (1 - 10^-x, with x from 2 to 4), so the slider spends
+    /// equal travel on each extra "9" rather than bunching them at the end.
+    fn set_integrator_coefficient(&mut self, amount: f64) {
+        let x = 2.0 + 2.2 * amount.clamp(0.0, 1.0);
+        let coefficient = 1.0 - 10f64.powf(-x);
+        for channel in self.channels.iter_mut() {
+            channel.integrator.set_coefficient(coefficient);
         }
     }
 

@@ -38,6 +38,60 @@ impl SharedParam {
     }
 }
 
+/// A fixed set of named parameters shared between JS and the audio callback.
+/// The names are set once when the stream starts; after that only the values
+/// change, so cloning this just shares the same underlying values.
+#[derive(Clone)]
+pub struct Params {
+    entries: Vec<(String, SharedParam)>,
+}
+
+impl Params {
+    /// `names[i]` starts with the value `values[i]`.
+    pub fn new(names: Vec<String>, values: Vec<f64>) -> Result<Self, String> {
+        if names.len() != values.len() {
+            return Err(format!(
+                "got {} parameter names but {} values",
+                names.len(),
+                values.len()
+            ));
+        }
+
+        let mut entries: Vec<(String, SharedParam)> = Vec::new();
+        for (name, value) in names.into_iter().zip(values) {
+            if entries.iter().any(|(existing, _)| *existing == name) {
+                return Err(format!("duplicate parameter name: {}", name));
+            }
+            entries.push((name, SharedParam::new(value)));
+        }
+
+        Ok(Params { entries })
+    }
+
+    fn find(&self, name: &str) -> Option<&SharedParam> {
+        self.entries
+            .iter()
+            .find(|(n, _)| n == name)
+            .map(|(_, param)| param)
+    }
+
+    /// The current value of `name`, or `None` if no parameter has that name.
+    pub fn get(&self, name: &str) -> Option<f64> {
+        self.find(name).map(SharedParam::get)
+    }
+
+    /// Update `name`. Errors if no parameter has that name, so typos show up.
+    pub fn set(&self, name: &str, value: f64) -> Result<(), String> {
+        match self.find(name) {
+            Some(param) => {
+                param.set(value);
+                Ok(())
+            }
+            None => Err(format!("unknown parameter: {}", name)),
+        }
+    }
+}
+
 type Points = VecDeque<(f32, f32, f32)>;
 
 /// A bounded queue of (x, y, z) points. The audio callback writes to it and

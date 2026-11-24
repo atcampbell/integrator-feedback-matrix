@@ -28,7 +28,10 @@ import('./pkg').catch(console.error).then((rust_module) => {
         // Stop any stream that is already playing, otherwise it is orphaned
         // (no JS reference left to free it) and keeps playing forever.
         stop();
-        handle = rust_module.beep(current_dt());
+        handle = rust_module.beep(
+            param_inputs.map((input) => input.dataset.param),
+            Float64Array.from(param_inputs, param_value),
+        );
     });
 
     const stop_button = document.getElementById('stop');
@@ -41,16 +44,24 @@ import('./pkg').catch(console.error).then((rust_module) => {
         }
     });
 
-    const dt_slider = document.getElementById('dt');
-    const dt_value = document.getElementById('dt-value');
-    const current_dt = () => parseFloat(dt_slider.value);
-    dt_slider.addEventListener('input', () => {
-        const dt = current_dt();
-        dt_value.textContent = dt;
-        if (handle != null) {
-            handle.set_dt(dt);
-        }
-    });
+    // Every element with a `data-param="name"` attribute in index.html is sent
+    // to Rust under that name. An element with the id `<name>-value`, if there
+    // is one, shows the current value.
+    const param_inputs = [...document.querySelectorAll('[data-param]')];
+    const param_value = (input) => parseFloat(input.value);
+
+    for (const input of param_inputs) {
+        const name = input.dataset.param;
+        const display = document.getElementById(`${name}-value`);
+        input.addEventListener('input', () => {
+            if (display != null) {
+                display.textContent = input.value;
+            }
+            if (handle != null) {
+                handle.set_param(name, param_value(input));
+            }
+        });
+    }
 
     const animate = () => {
         // scope.fade();

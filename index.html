@@ -14,8 +14,13 @@
         </div>
         <div>
             <label for="dt">dt</label>
-            <input id="dt" type="range" min="0.0005" max="0.02" step="0.0005" value="0.01" />
+            <input id="dt" data-param="dt" type="range" min="0.0005" max="0.02" step="0.0005" value="0.01" />
             <span id="dt-value">0.01</span>
+        </div>
+        <div>
+            <label for="integrator">integrator</label>
+            <input id="integrator" data-param="integrator" type="range" min="0" max="1" step="0.001" value="0" />
+            <span id="integrator-value">0</span>
         </div>
         <canvas id="scope" width="500" height="500" style="background: #000"></canvas>
     </body>
