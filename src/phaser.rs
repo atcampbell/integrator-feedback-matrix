@@ -48,6 +48,10 @@ impl Phaser {
         }
     }
 
+    pub fn set_feedback(&mut self, feedback: f64) {
+        self.feedback = feedback;
+    }
+
     pub fn process(&mut self, input: f64) -> f64 {
         let mut out = crossfade(input, self.value, self.feedback);
 

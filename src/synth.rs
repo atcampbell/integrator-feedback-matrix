@@ -83,6 +83,18 @@ impl Synth {
         if let Some(amount) = params.get("integrator") {
             self.set_integrator_coefficient(amount);
         }
+        if let Some(amount) = params.get("phaser_feedback") {
+            self.set_phaser_feedback(amount);
+        }
+    }
+
+    /// `amount` is 0–1 from the UI. It maps linearly to a feedback of -1 → 1,
+    /// so the middle of the slider (0.5) is no feedback.
+    fn set_phaser_feedback(&mut self, amount: f64) {
+        let feedback = amount.clamp(0.0, 1.0) * 2.0 - 1.0;
+        for channel in self.channels.iter_mut() {
+            channel.allpass.set_feedback(feedback);
+        }
     }
 
     /// `amount` is 0–1 from the UI. It maps to a coefficient of 0.99 → 0.9999
